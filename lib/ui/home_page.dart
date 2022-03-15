@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:buscador_de_gifs/ui/gif_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:share/share.dart';
+import 'package:transparent_image/transparent_image.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -13,17 +16,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
 
   String? _search;
-  int offset = 0;
+  int _offset = 0;
 
   Future<Map> _getGifs() async {
     http.Response response;
 
-    if (_search == null) { //faz a requizição do site
+    if (_search != null) { //faz a requizição do site
       response = await http.get(Uri.parse(
           "https://api.giphy.com/v1/gifs/trending?api_key=HQEASWKeRAZOxBdn4FZWzMuXO4IWbfP6&limit=20&rating=g"));
     } else {
-      response = await http.get(Uri.parse(
-          "https://api.giphy.com/v1/gifs/search?api_key=HQEASWKeRAZOxBdn4FZWzMuXO4IWbfP6&q=$_search&limit=20&offset=$offset&rating=g&lang=pt"));
+      response = await http.get(Uri.parse("https://api.giphy.com/v1/gifs/search?api_key=HQEASWKeRAZOxBdn4FZWzMuXO4IWbfP6&q=$_search&limit=19&offset=$_offset&rating=g&lang=pt"));
     }
       return json.decode(response.body); //retorna um arquivo json
   }
@@ -49,7 +51,7 @@ class _HomePageState extends State<HomePage> {
       body: Column(
           children: [
             Padding(
-              padding: EdgeInsets.all(10.0),
+              padding: const EdgeInsets.all(10.0),
               child: TextField(
                 decoration: const InputDecoration(
                   labelText: "Pesquise Aqui!!!",
@@ -61,6 +63,7 @@ class _HomePageState extends State<HomePage> {
                 onSubmitted: (text) {
                   setState(() {
                     _search = text;
+                    _offset = 0;     //reseta o icone de pesquisa
                   });
                 },
               ),
@@ -97,6 +100,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  int _getCount(List data) {     //cria um ultimo widget para pesquisa
+    if(_search == null){
+      return data.length;     //mantem a lista caso não esteja pesquisando
+    } else {
+      return data.length + 1;     //carrega a lista caso esteja pesquisando
+    }
+  }
+
   Widget _createGifTable(BuildContext context, AsyncSnapshot snapshot) {     //cria uma grade de itens
     return GridView.builder(
         padding:const EdgeInsets.all(10.0),
@@ -105,14 +116,47 @@ class _HomePageState extends State<HomePage> {
             crossAxisSpacing: 10.0,     //espacamento entre os itens
             mainAxisSpacing: 10.0     //espacamento na vertical
         ),
-        itemCount: snapshot.data["data"].length,     //quantidade de itens na horizontal
+        itemCount: _getCount(snapshot.data["data"]),     //quantidade de itens na horizontal
         itemBuilder: (context, index) {
-          return GestureDetector(
-            child: Image.network(snapshot.data["data"][index]["images"]["fixed_height"]["url"],
-              height: 300.0,
-              fit: BoxFit.cover,
-            ),
-          );
+          if(_search == null || index < snapshot.data["data"].length)
+            return GestureDetector(
+              /*child: Image.network(snapshot.data["data"][index]["images"]["fixed_height"]["url"],
+                height: 300.0,
+                fit: BoxFit.cover,
+              ),*/
+              child: FadeInImage.memoryNetwork(     //cria um carregamento de imagens mais suave
+                placeholder: kTransparentImage,     //cria uma imagem transparente
+                image: snapshot.data["data"][index]["images"]["fixed_height"]["url"],
+                height: 300.0,
+                fit: BoxFit.cover,
+              ),
+              onTap: () {     //transfere para a proxima pagina
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => GifPage(snapshot.data["data"][index]))     //declara uma rota
+                );
+              },
+              onLongPress: () {     //compartilha o arquivo quando for apertado
+                Share.share(snapshot.data["data"][index]["images"]["fixed_height"]["url"]);
+              },
+            );
+          else
+            return Container(     //cria um icone de pesquisa
+              child: GestureDetector(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add, color: Colors.white, size: 70.0,),
+                    Text("Carregar mais...",
+                      style: TextStyle(color: Colors.white, fontSize: 22.0),),
+                  ],
+                ),
+                onTap: () {     //faz com que o icone de pesquisa funcione
+                  setState(() {
+                    _offset += 19;
+                  });
+                },
+              ),
+            );
         }
     );
   }
