@@ -31,14 +31,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  void initState() {
-    // TODO: implement initState
-    setState(() {
-      print(_getGifs());
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -144,7 +136,7 @@ class _HomePageState extends State<HomePage> {
               child: GestureDetector(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                  children: const [
                     Icon(Icons.add, color: Colors.white, size: 70.0,),
                     Text("Carregar mais...",
                       style: TextStyle(color: Colors.white, fontSize: 22.0),),
